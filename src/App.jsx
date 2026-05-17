@@ -108,16 +108,20 @@ function AppInner() {
   const sortedCards = useMemo(() => {
     const dir = settings.sortDir === 'desc' ? 1 : -1;
 
+    // dir=1 (desc): want larger values first → b-a gives positive when b>a → b before a ✓
+    // dir=-1 (asc): want smaller values first → -(b-a) = a-b gives negative when a<b → a before b ✓
     return [...filteredCards].sort((a, b) => {
       switch (settings.sortBy) {
-        case 'rawPrice':    return dir * ((a.rawPrice     || 0)    - (b.rawPrice     || 0));
-        case 'psa9Roi':     return dir * ((a.psa9Roi      ?? -9999) - (b.psa9Roi      ?? -9999));
-        case 'psa10Roi':    return dir * ((a.psa10Roi     ?? -9999) - (b.psa10Roi     ?? -9999));
-        case 'psa9Profit':  return dir * ((a.psa9Profit   ?? -9999) - (b.psa9Profit   ?? -9999));
-        case 'psa10Profit': return dir * ((a.psa10Profit  ?? -9999) - (b.psa10Profit  ?? -9999));
-        case 'rarity':      return dir * ((RARITY_ORDER[b.rarity] ?? 9) - (RARITY_ORDER[a.rarity] ?? 9));
+        case 'rawPrice':    return dir * ((b.rawPrice    || 0)     - (a.rawPrice    || 0));
+        case 'psa9Roi':     return dir * ((b.psa9Roi     ?? -9999) - (a.psa9Roi     ?? -9999));
+        case 'psa10Roi':    return dir * ((b.psa10Roi    ?? -9999) - (a.psa10Roi    ?? -9999));
+        case 'psa9Profit':  return dir * ((b.psa9Profit  ?? -9999) - (a.psa9Profit  ?? -9999));
+        case 'psa10Profit': return dir * ((b.psa10Profit ?? -9999) - (a.psa10Profit ?? -9999));
+        // Lower RARITY_ORDER = rarer; desc = rarest first = smallest order first
+        case 'rarity':      return dir * ((RARITY_ORDER[a.rarity] ?? 9) - (RARITY_ORDER[b.rarity] ?? 9));
+        // name desc = Z→A, asc = A→Z
         case 'name':        return dir * b.name.localeCompare(a.name);
-        default:            return dir * ((a.psa10Roi     ?? -9999) - (b.psa10Roi     ?? -9999));
+        default:            return dir * ((b.psa10Roi    ?? -9999) - (a.psa10Roi    ?? -9999));
       }
     });
   }, [filteredCards, settings.sortBy, settings.sortDir]);
