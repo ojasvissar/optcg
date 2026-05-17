@@ -8,7 +8,7 @@ const DEFAULTS = {
   minRawPrice:  0,
   psa9Mult:     1.5,
   psa10Mult:    2.5,
-  sortBy:       'psa10roi',
+  sortBy:       'psa10Roi',
   sortDir:      'desc',
   filterRarities: [],   // empty = show all
   filterColors:   [],   // empty = show all

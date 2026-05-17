@@ -104,20 +104,20 @@ function AppInner() {
     return result;
   }, [enrichedCards, settings.minRawPrice, settings.filterRarities]);
 
-  // Sort
+  // Sort — dir=1 means "desc" (larger values first), dir=-1 means "asc"
   const sortedCards = useMemo(() => {
-    const dir = settings.sortDir === 'asc' ? 1 : -1;
+    const dir = settings.sortDir === 'desc' ? 1 : -1;
 
     return [...filteredCards].sort((a, b) => {
       switch (settings.sortBy) {
-        case 'rawPrice':    return dir * ((b.rawPrice || 0) - (a.rawPrice || 0));
-        case 'psa9roi':     return dir * ((b.psa9Roi   ?? -9999) - (a.psa9Roi   ?? -9999));
-        case 'psa10roi':    return dir * ((b.psa10Roi  ?? -9999) - (a.psa10Roi  ?? -9999));
-        case 'psa9profit':  return dir * ((b.psa9Profit  ?? -9999) - (a.psa9Profit  ?? -9999));
-        case 'psa10profit': return dir * ((b.psa10Profit ?? -9999) - (a.psa10Profit ?? -9999));
-        case 'rarity':      return dir * ((RARITY_ORDER[a.rarity] ?? 9) - (RARITY_ORDER[b.rarity] ?? 9));
-        case 'name':        return dir * a.name.localeCompare(b.name);
-        default:            return dir * ((b.psa10Roi  ?? -9999) - (a.psa10Roi  ?? -9999));
+        case 'rawPrice':    return dir * ((a.rawPrice     || 0)    - (b.rawPrice     || 0));
+        case 'psa9Roi':     return dir * ((a.psa9Roi      ?? -9999) - (b.psa9Roi      ?? -9999));
+        case 'psa10Roi':    return dir * ((a.psa10Roi     ?? -9999) - (b.psa10Roi     ?? -9999));
+        case 'psa9Profit':  return dir * ((a.psa9Profit   ?? -9999) - (b.psa9Profit   ?? -9999));
+        case 'psa10Profit': return dir * ((a.psa10Profit  ?? -9999) - (b.psa10Profit  ?? -9999));
+        case 'rarity':      return dir * ((RARITY_ORDER[b.rarity] ?? 9) - (RARITY_ORDER[a.rarity] ?? 9));
+        case 'name':        return dir * b.name.localeCompare(a.name);
+        default:            return dir * ((a.psa10Roi     ?? -9999) - (b.psa10Roi     ?? -9999));
       }
     });
   }, [filteredCards, settings.sortBy, settings.sortDir]);
@@ -236,10 +236,10 @@ function AppInner() {
                 value={settings.sortBy}
                 onChange={(e) => update({ sortBy: e.target.value })}
               >
-                <option value="psa10roi">Sort: PSA 10 ROI</option>
-                <option value="psa9roi">Sort: PSA 9 ROI</option>
-                <option value="psa10profit">Sort: PSA 10 Profit</option>
-                <option value="psa9profit">Sort: PSA 9 Profit</option>
+                <option value="psa10Roi">Sort: PSA 10 ROI</option>
+                <option value="psa9Roi">Sort: PSA 9 ROI</option>
+                <option value="psa10Profit">Sort: PSA 10 Profit</option>
+                <option value="psa9Profit">Sort: PSA 9 Profit</option>
                 <option value="rawPrice">Sort: Raw Price</option>
                 <option value="rarity">Sort: Rarity</option>
                 <option value="name">Sort: Name A–Z</option>
@@ -332,6 +332,15 @@ function AppInner() {
                 onCardClick={handleCardClick}
                 watchlist={settings.watchlist}
                 onToggleWatch={toggleWatchlist}
+                sortBy={settings.sortBy}
+                sortDir={settings.sortDir}
+                onSort={(col) => {
+                  if (col === settings.sortBy) {
+                    update({ sortDir: settings.sortDir === 'desc' ? 'asc' : 'desc' });
+                  } else {
+                    update({ sortBy: col, sortDir: 'desc' });
+                  }
+                }}
               />
             )
           )}
