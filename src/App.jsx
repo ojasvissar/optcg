@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSettings } from './hooks/useSettings.js';
 import { useCardData } from './hooks/useCardData.js';
 import { useGradedPrices } from './hooks/useGradedPrices.js';
+import { useExchangeRate } from './hooks/useExchangeRate.js';
 import { cacheAge as getCacheAge, cacheClear } from './utils/cache.js';
 import { calcROI, calcEstimatedPrices } from './utils/calculateROI.js';
 import { RARITY_ORDER } from './utils/cardMatcher.js';
@@ -33,6 +34,7 @@ function AppInner() {
   }, []);
 
   const hasApiKey = !!(settings.apiKey && settings.apiKey.trim());
+  const { rate: usdToCad, loading: rateLoading } = useExchangeRate();
 
   // Fetch graded prices from TCG Price Lookup
   const { prices, progress, fetching, getPriceForCard } = useGradedPrices(
@@ -41,32 +43,34 @@ function AppInner() {
     hasApiKey
   );
 
-  // Enrich cards with pricing and ROI data
+  // Enrich cards with pricing and ROI data (all displayed prices in CAD)
   const enrichedCards = useMemo(() => {
+    const fx = usdToCad; // USD → CAD multiplier
+
     return cards.map((card) => {
       const gradedData = hasApiKey ? getPriceForCard(card.id) : null;
 
-      // Determine raw price — prefer TCG Price Lookup, fall back to OPTCG
-      const rawPrice = gradedData?.rawTcgMarket || gradedData?.rawEbay7d || card.marketPrice || 0;
+      // Raw price: prefer TCG live data, fall back to OPTCG — both USD, convert to CAD
+      const rawUsd = gradedData?.rawTcgMarket || gradedData?.rawEbay7d || card.marketPrice || 0;
+      const rawPrice = rawUsd * fx;
 
       let psa9Price, psa10Price, priceSource;
-
       const hasLiveRaw = hasApiKey && gradedData && (gradedData.rawTcgMarket || gradedData.rawEbay7d);
 
       if (hasApiKey && gradedData && (gradedData.psa9 || gradedData.psa10)) {
-        // Real graded prices from TCG Price Lookup
-        psa9Price   = gradedData.psa9  ?? null;
-        psa10Price  = gradedData.psa10 ?? null;
+        // Real graded prices from TCG Price Lookup (USD) → CAD
+        psa9Price   = gradedData.psa9  != null ? gradedData.psa9  * fx : null;
+        psa10Price  = gradedData.psa10 != null ? gradedData.psa10 * fx : null;
         priceSource = 'live';
       } else {
-        // Estimate graded prices with multipliers (raw from TCG if available, else OPTCG)
+        // Estimated graded prices using multipliers (applied after CAD conversion)
         const est = calcEstimatedPrices(rawPrice, settings.psa9Mult, settings.psa10Mult);
         psa9Price   = est.psa9;
         psa10Price  = est.psa10;
-        // Badge shows "LIVE" if we at least got the raw price from TCG Price Lookup
         priceSource = hasLiveRaw ? 'live' : 'est';
       }
 
+      // Grading cost is entered by user in CAD — no conversion needed
       const roi9  = calcROI(psa9Price,  rawPrice, settings.gradingCost);
       const roi10 = calcROI(psa10Price, rawPrice, settings.gradingCost);
 
@@ -75,15 +79,16 @@ function AppInner() {
         rawPrice,
         psa9Price,
         psa10Price,
-        psa9Roi:    roi9?.roi    ?? null,
-        psa10Roi:   roi10?.roi   ?? null,
-        psa9Profit: roi9?.profit ?? null,
+        psa9Roi:     roi9?.roi     ?? null,
+        psa10Roi:    roi10?.roi    ?? null,
+        psa9Profit:  roi9?.profit  ?? null,
         psa10Profit: roi10?.profit ?? null,
         priceSource,
         gradedData,
+        fx,
       };
     });
-  }, [cards, getPriceForCard, hasApiKey, settings.gradingCost, settings.psa9Mult, settings.psa10Mult]);
+  }, [cards, getPriceForCard, hasApiKey, settings.gradingCost, settings.psa9Mult, settings.psa10Mult, usdToCad]);
 
   // Filter
   const filteredCards = useMemo(() => {
@@ -203,6 +208,19 @@ function AppInner() {
           {!hasApiKey && !settings.bannerDismissed && selectedSet && (
             <FallbackBanner onDismiss={() => update({ bannerDismissed: true })} />
           )}
+
+          {/* Exchange rate chip */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <div style={{
+              fontFamily: 'Space Mono, monospace', fontSize: 10,
+              color: 'var(--txt3)', background: 'var(--bg2)',
+              border: '1px solid var(--border)', borderRadius: 4,
+              padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>
+              <span style={{ color: rateLoading ? 'var(--amber2)' : 'var(--positive)', fontSize: 8 }}>●</span>
+              {rateLoading ? 'Fetching rate…' : `1 USD = CA$${usdToCad.toFixed(4)} · All prices in CAD`}
+            </div>
+          </div>
 
           {/* Summary stats */}
           {!cardsLoading && cards.length > 0 && (

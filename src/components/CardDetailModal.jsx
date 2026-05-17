@@ -8,7 +8,6 @@ import PriceTrendChart from './PriceTrendChart.jsx';
 export default function CardDetailModal({ card, gradedPrices, gradingCost, onClose }) {
   const [imgError, setImgError] = useState(false);
 
-  // Close on Escape key
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
@@ -17,11 +16,17 @@ export default function CardDetailModal({ card, gradedPrices, gradingCost, onClo
 
   if (!card) return null;
 
-  const rawPrice  = gradedPrices?.rawTcgMarket || gradedPrices?.rawEbay7d || card.marketPrice || 0;
-  const psa9      = gradedPrices?.psa9  ?? null;
-  const psa10     = gradedPrices?.psa10 ?? null;
-  const bgs95     = gradedPrices?.bgs95 ?? null;
-  const cgc10     = gradedPrices?.cgc10 ?? null;
+  // card.rawPrice / psa9Price / psa10Price are already in CAD (converted in App.jsx)
+  // gradedPrices (USD) is only used for bgs95/cgc10 — apply card.fx to those too
+  const fx     = card.fx ?? 1;
+  const rawPrice = card.rawPrice || 0;
+  const psa9     = card.psa9Price  ?? null;
+  const psa10    = card.psa10Price ?? null;
+  const bgs95    = gradedPrices?.bgs95 != null ? gradedPrices.bgs95 * fx : null;
+  const cgc10    = gradedPrices?.cgc10 != null ? gradedPrices.cgc10 * fx : null;
+  // Raw breakdown rows (also convert USD→CAD)
+  const rawTcg  = gradedPrices?.rawTcgMarket != null ? gradedPrices.rawTcgMarket * fx : null;
+  const rawEbay = gradedPrices?.rawEbay7d    != null ? gradedPrices.rawEbay7d    * fx : null;
 
   const roi9  = calcROI(psa9,  rawPrice, gradingCost);
   const roi10 = calcROI(psa10, rawPrice, gradingCost);
@@ -80,9 +85,9 @@ export default function CardDetailModal({ card, gradedPrices, gradingCost, onClo
             <table className="price-table">
               <tbody>
                 <tr><td>Raw (TCGPlayer)</td>
-                  <td>{fmt(gradedPrices?.rawTcgMarket)}</td></tr>
+                  <td>{fmt(rawTcg)}</td></tr>
                 <tr><td>Raw (eBay 7d avg)</td>
-                  <td>{fmt(gradedPrices?.rawEbay7d)}</td></tr>
+                  <td>{fmt(rawEbay)}</td></tr>
                 <tr><td>PSA 9</td>
                   <td className={psa9 ? 'positive-val' : 'na-val'}>{fmt(psa9)}</td></tr>
                 <tr><td>PSA 10</td>
