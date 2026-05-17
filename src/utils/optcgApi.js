@@ -1,4 +1,5 @@
-const BASE = '/optcg-api';
+// Use Vite proxy in dev to avoid CORS; call directly in production (API has CORS: *)
+const BASE = import.meta.env.DEV ? '/optcg-api' : 'https://optcgapi.com';
 const IMG_BASE = 'https://optcgapi.com/media/static/Card_Images';
 
 // cardId should be the card_image_id field (e.g. "OP01-077")

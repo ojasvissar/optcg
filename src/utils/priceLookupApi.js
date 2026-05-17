@@ -1,4 +1,5 @@
-const BASE = '/tcg-price-api/v1';
+// Use Vite proxy in dev; call directly in production (API has CORS: *)
+const BASE = import.meta.env.DEV ? '/tcg-price-api/v1' : 'https://api.tcgpricelookup.com/v1';
 
 let queue = [];
 let processing = false;
